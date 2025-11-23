@@ -74,7 +74,7 @@ export default function Login({ onLogin, onShowSignUp }: LoginProps) {
           <Card>
             <CardHeader className="text-center">
               <CardTitle className="text-2xl font-bold text-gray-900">Welcome Back</CardTitle>
-              <CardDescription>Sign in to access your quote dashboard</CardDescription>
+              <CardDescription>Sign in to access SaltPM</CardDescription>
             </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -139,7 +139,7 @@ export default function Login({ onLogin, onShowSignUp }: LoginProps) {
               </Button>
               
               <p className="text-xs text-gray-500">
-                Demo: Use any email and password to sign in
+                Login with your Salt Email
               </p>
             </div>
           </CardContent>

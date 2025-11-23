@@ -1,6 +1,5 @@
 {
   "hosting": {
-    "site": "connections-quote-tool",
     "source": ".",
     "frameworksBackend": {
       "region": "us-central1"

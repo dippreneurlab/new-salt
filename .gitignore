@@ -39,3 +39,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Firebase function build artifacts
+firebase-debug.log
+.firebase/
+functions/node_modules/
+functions/lib/
+functions/dist/
+**/dist/
+**/*.d.ts
+# Ignore all type definition files inside node_modules
+functions/node_modules/**/dist/**
+functions/node_modules/**/*.d.ts

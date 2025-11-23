@@ -1008,7 +1008,7 @@ export default function Home() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-2">
-          <p className="text-lg font-medium text-gray-800">Loading your Cloud SQL data…</p>
+          <p className="text-lg font-medium text-gray-800">Loading your data…</p>
           <p className="text-sm text-gray-500">Hang tight while we sync your workspace.</p>
         </div>
       </div>

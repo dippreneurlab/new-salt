@@ -20,7 +20,7 @@ export async function POST(request: Request) {
 
   await Promise.all(
     Object.entries(entries).map(async ([key, value]) => {
-      const stored = await setStorageValue(user.uid, key, value);
+      const stored = await setStorageValue(user.uid, key, value, user.email);
       saved[key] = stored;
     })
   );

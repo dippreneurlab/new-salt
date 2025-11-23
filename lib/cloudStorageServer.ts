@@ -1,4 +1,6 @@
 import { query } from './db';
+import { getPipelineEntriesForUser, replacePipelineEntries, PipelineEntry } from './pipelineRepository';
+import { getQuotesForUser, parseQuotesValue, replaceQuotes } from './quotesRepository';
 
 let storageTableReady = false;
 
@@ -17,16 +19,57 @@ const ensureStorageTable = async () => {
   storageTableReady = true;
 };
 
+const PIPELINE_KEY = 'pipeline-entries';
+const QUOTES_KEY = 'saltxc-all-quotes';
+
+const parsePipelineValue = (value: any): PipelineEntry[] => {
+  if (value == null) return [];
+  if (Array.isArray(value)) return value as PipelineEntry[];
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
 export const getStorageValue = async <T = any>(userId: string, key: string): Promise<T | null> => {
+  if (key === PIPELINE_KEY) {
+    const entries = await getPipelineEntriesForUser(userId);
+    return JSON.stringify(entries) as T;
+  }
+  if (key === QUOTES_KEY) {
+    const quotes = await getQuotesForUser(userId);
+    return JSON.stringify(quotes) as T;
+  }
+
   await ensureStorageTable();
   const res = await query<{ storage_value: T }>(
     'SELECT storage_value FROM user_storage WHERE user_id = $1 AND storage_key = $2',
     [userId, key]
   );
-  return res.rows[0]?.storage_value ?? null;
+  const value = res.rows[0]?.storage_value;
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'string') return value as T;
+  return JSON.stringify(value) as T;
 };
 
-export const setStorageValue = async <T = any>(userId: string, key: string, value: T): Promise<T> => {
+export const setStorageValue = async <T = any>(userId: string, key: string, value: T, email?: string): Promise<T> => {
+  if (key === PIPELINE_KEY) {
+    const entries = parsePipelineValue(value);
+    await replacePipelineEntries(userId, entries, email);
+    return value;
+  }
+
+  if (key === QUOTES_KEY) {
+    const quotes = parseQuotesValue(value);
+    await replaceQuotes(userId, quotes, email);
+    return value;
+  }
+
   await ensureStorageTable();
   const res = await query<{ storage_value: T }>(
     `
@@ -42,6 +85,15 @@ export const setStorageValue = async <T = any>(userId: string, key: string, valu
 };
 
 export const deleteStorageValue = async (userId: string, key: string) => {
+  if (key === PIPELINE_KEY) {
+    await replacePipelineEntries(userId, []);
+    return;
+  }
+  if (key === QUOTES_KEY) {
+    await replaceQuotes(userId, []);
+    return;
+  }
+
   await ensureStorageTable();
   await query('DELETE FROM user_storage WHERE user_id = $1 AND storage_key = $2', [userId, key]);
 };
@@ -53,8 +105,45 @@ export const listStorageValues = async (userId: string) => {
     [userId]
   );
 
-  return res.rows.reduce<Record<string, any>>((acc, row) => {
-    acc[row.storage_key] = row.storage_value;
-    return acc;
-  }, {});
+  const base = res.rows.reduce<Record<string, any>>(
+    (acc: Record<string, any>, row: { storage_key: string; storage_value: any }) => {
+      const value = row.storage_value;
+
+      acc[row.storage_key] =
+        value === null || value === undefined
+          ? null
+          : typeof value === 'string'
+          ? value
+          : JSON.stringify(value);
+
+      return acc;
+    },
+    {}
+  );
+
+
+  // Inject pipeline/quotes from direct tables
+  const [pipelineEntries, quotes] = await Promise.all([
+    getPipelineEntriesForUser(userId),
+    getQuotesForUser(userId)
+  ]);
+
+  base[PIPELINE_KEY] = JSON.stringify(pipelineEntries);
+  base[QUOTES_KEY] = JSON.stringify(quotes);
+
+  // Build a simple changelog from pipeline entries so newsfeed always reflects DB
+  const changeLog = pipelineEntries
+    .map(entry => ({
+      type: 'addition',
+      projectCode: entry.projectCode,
+      projectName: entry.programName,
+      client: entry.client,
+      description: 'Added/updated from Cloud SQL',
+      date: entry.updatedAt || entry.createdAt || new Date().toISOString(),
+      user: entry.createdByEmail || entry.createdBy || entry.owner || 'system'
+    }))
+    .sort((a, b) => (a.date > b.date ? -1 : 1));
+  base['pipeline-changelog'] = JSON.stringify(changeLog);
+
+  return base;
 };
