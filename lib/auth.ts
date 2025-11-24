@@ -9,7 +9,10 @@ export interface AuthenticatedUser {
 export const getUserFromRequest = async (req: Request): Promise<AuthenticatedUser | null> => {
   const authHeader = req.headers.get('authorization') || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.replace('Bearer ', '') : null;
-  if (!token) return null;
+  if (!token) {
+    console.warn('Auth missing: no Authorization header present');
+    return null;
+  }
 
   try {
     const decoded = await verifyFirebaseToken(token);

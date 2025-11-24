@@ -15,6 +15,7 @@ import ProductionCosts from './ProductionCosts';
 import QuoteReview from './QuoteReview';
 import { Poppins } from 'next/font/google';
 import { cloudStorage } from '@/lib/cloudStorage';
+import { authFetch } from '@/lib/authFetch';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -354,7 +355,7 @@ export default function ThreeInOne({
   useEffect(() => {
     const loadStaffData = async () => {
       try {
-        const response = await fetch('/Salt_staff.csv', { cache: 'no-cache' });
+        const response = await authFetch('/Salt_staff.csv', { cache: 'no-cache' });
         if (!response.ok) throw new Error('Failed to load staff data');
         
         const csvText = await response.text();

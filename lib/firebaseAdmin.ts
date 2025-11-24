@@ -1,31 +1,29 @@
-import { App, cert, getApp, getApps, initializeApp } from 'firebase-admin/app';
+import { App, applicationDefault, cert, getApp, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 
-// Support both FIREBASE_* and FIREBASE_ADMIN_* naming
-const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-const clientEmail = process.env.FIREBASE_CLIENT_EMAIL || process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
-const privateKey = (process.env.FIREBASE_PRIVATE_KEY || process.env.FIREBASE_ADMIN_PRIVATE_KEY)?.replace(/\\n/g, '\n');
+// Expect FB_* / FB_ADMIN_* naming
+const projectId = process.env.FB_PROJECT_ID || process.env.NEXT_PUBLIC_FB_PROJECT_ID;
+const clientEmail = process.env.FB_CLIENT_EMAIL || process.env.FB_ADMIN_CLIENT_EMAIL;
+const privateKey = (process.env.FB_PRIVATE_KEY || process.env.FB_ADMIN_PRIVATE_KEY)?.replace(/\\n/g, '\n');
 
 let adminApp: App | null = null;
 
 export const getFirebaseAdminApp = (): App | null => {
   if (adminApp) return adminApp;
-  if (!projectId || !clientEmail || !privateKey) {
-    console.warn('Firebase admin SDK is not fully configured. Set FIREBASE_PROJECT_ID (or NEXT_PUBLIC_FIREBASE_PROJECT_ID), FIREBASE_CLIENT_EMAIL (or FIREBASE_ADMIN_CLIENT_EMAIL), and FIREBASE_PRIVATE_KEY (or FIREBASE_ADMIN_PRIVATE_KEY).');
-    return null;
-  }
 
-  if (!getApps().length) {
-    adminApp = initializeApp({
-      credential: cert({
-        projectId,
-        clientEmail,
-        privateKey
-      })
-    });
-  } else {
-    adminApp = getApp();
-  }
+  const credential =
+    projectId && clientEmail && privateKey
+      ? cert({
+          projectId,
+          clientEmail,
+          privateKey
+        })
+      : applicationDefault();
+
+  // If no explicit project is provided, let the default credentials supply it.
+  const appOptions = projectId ? { credential, projectId } : { credential };
+
+  adminApp = getApps().length ? getApp() : initializeApp(appOptions);
 
   return adminApp;
 };

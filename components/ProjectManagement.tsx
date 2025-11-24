@@ -11,6 +11,7 @@ import BrandedHeader from './BrandedHeader';
 import { getAllQuotes } from '@/utils/quoteManager';
 import { Department } from '../types';
 import { cloudStorage } from '@/lib/cloudStorage';
+import { authFetch } from '@/lib/authFetch';
 
 // Task type library based on Quote Hub stages
 const TASK_TYPES = {
@@ -281,7 +282,7 @@ const loadStaffData = async () => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
     
-    const response = await fetch('/Salt_staff.csv', { 
+    const response = await authFetch('/Salt_staff.csv', { 
       signal: controller.signal,
       cache: 'no-cache'
     });
@@ -2647,4 +2648,3 @@ export default function ProjectManagement({ user, onLogout, selectedQuoteId, onB
     </div>
   );
 }
-

@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth';
 import { deleteStorageValue, getStorageValue, setStorageValue } from '@/lib/cloudStorageServer';
 
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
+
 // Next type-checker wants params to be awaited; declare as Promise to satisfy ParamCheck
 type RouteContext = { params: Promise<{ key: string }> };
 

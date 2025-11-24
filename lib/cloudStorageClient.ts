@@ -1,17 +1,9 @@
-import { firebaseAuth } from './firebaseClient';
-
-const getToken = async () => {
-  const user = firebaseAuth.currentUser;
-  if (!user) throw new Error('User not authenticated');
-  return user.getIdToken();
-};
+import { authFetch } from './authFetch';
 
 const authorizedFetch = async (input: RequestInfo | URL, init: RequestInit = {}) => {
-  const token = await getToken();
   const headers = new Headers(init.headers || {});
-  headers.set('Authorization', `Bearer ${token}`);
   headers.set('Content-Type', 'application/json');
-  return fetch(input, { ...init, headers });
+  return authFetch(input, { ...init, headers });
 };
 
 export const getStorageItem = async <T = any>(key: string): Promise<T | null> => {

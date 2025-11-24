@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { firebaseAuth } from '@/lib/firebaseClient';
+import { authFetch } from '@/lib/authFetch';
 import { 
   OverheadRow, 
   employeesToOverheadRows,
@@ -27,11 +28,9 @@ export interface UseOverheadEmployeesReturn {
 const fetchWithAuth = async (path: string, init: RequestInit = {}) => {
   const user = firebaseAuth.currentUser;
   if (!user) throw new Error('Please sign in to load overhead data');
-  const token = await user.getIdToken();
   const headers = new Headers(init.headers || {});
-  headers.set('Authorization', `Bearer ${token}`);
   headers.set('Content-Type', 'application/json');
-  const res = await fetch(path, { ...init, headers });
+  const res = await authFetch(path, { ...init, headers });
   if (!res.ok) {
     const text = await res.text();
     throw new Error(text || `Request failed (${res.status})`);
