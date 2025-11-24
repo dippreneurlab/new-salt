@@ -1,20 +1,36 @@
 import { Pool, PoolConfig, QueryResult } from 'pg';
-import type {  QueryResultRow } from 'pg';
+import type { QueryResultRow } from 'pg';
 
-let pool: Pool | null = null;
+/**
+ * IMPORTANT:
+ * Do NOT initialize a DB connection at import time.
+ * Cloud Functions Gen2 freezes when external connections
+ * start before the function finishes booting.
+ *
+ * Keep the pool uninitialized until the first query.
+ */
+let pool: Pool | undefined = undefined;
 
 const buildConfig = (): PoolConfig => {
   const connectionString = process.env.DATABASE_URL;
   const connectionName = process.env.CLOUD_SQL_CONNECTION_NAME;
+
   const host = process.env.POSTGRES_HOST;
-  const port = process.env.POSTGRES_PORT ? parseInt(process.env.POSTGRES_PORT, 10) : undefined;
+  const port = process.env.POSTGRES_PORT
+    ? parseInt(process.env.POSTGRES_PORT, 10)
+    : undefined;
+
   const user = process.env.POSTGRES_USER;
   const password = process.env.POSTGRES_PASSWORD;
   const database = process.env.POSTGRES_DB;
-  const sslEnabled = (process.env.POSTGRES_SSL || '').toLowerCase() !== 'false';
+
+  const sslEnabled =
+    (process.env.POSTGRES_SSL || "").toLowerCase() !== "false";
 
   if (!connectionString && !database) {
-    console.warn('Postgres connection info missing. Set DATABASE_URL or POSTGRES_* variables.');
+    console.warn(
+      "Postgres connection info missing. Set DATABASE_URL or POSTGRES_* variables."
+    );
   }
 
   const config: PoolConfig = connectionString
@@ -24,7 +40,7 @@ const buildConfig = (): PoolConfig => {
         port,
         user,
         password,
-        database
+        database,
       };
 
   if (sslEnabled) {
@@ -34,14 +50,21 @@ const buildConfig = (): PoolConfig => {
   return config;
 };
 
+/**
+ * Lazily initialize the pool on first use.
+ * This prevents Cloud Functions cold start failures.
+ */
 export const getPool = (): Pool => {
   if (!pool) {
     pool = new Pool(buildConfig());
+    console.log("✔ PostgreSQL pool initialized");
   }
   return pool;
 };
 
-export const query = async <T extends QueryResultRow = QueryResultRow>(
+export const query = async <
+  T extends QueryResultRow = QueryResultRow
+>(
   text: string,
   params: any[] = []
 ): Promise<QueryResult<T>> => {
