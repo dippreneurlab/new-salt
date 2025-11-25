@@ -8,15 +8,19 @@ import {
   initializeApp,
   ServiceAccount,
 } from "firebase-admin/app";
-import { getAuth, type DecodedIdToken } from "firebase-admin/auth";
+import { getAuth, type Auth, type DecodedIdToken } from "firebase-admin/auth";
 
 function buildServiceAccount(): ServiceAccount | null {
   const projectId = process.env.FB_PROJECT_ID;
   const clientEmail = process.env.FB_CLIENT_EMAIL;
   let privateKey = process.env.FB_PRIVATE_KEY;
 
-  if (privateKey && privateKey.includes("\\n")) {
-    privateKey = privateKey.replace(/\\n/g, "\n").replace(/^"|"$/g, "");
+  if (privateKey) {
+    privateKey = privateKey
+      .replace(/\\n/g, "\n")
+      .replace(/\\r/g, "\n")
+      .replace(/^"|"$/g, "")
+      .trim();
   }
 
   if (projectId && clientEmail && privateKey) {
@@ -26,36 +30,40 @@ function buildServiceAccount(): ServiceAccount | null {
   return null;
 }
 
-function initAdminApp() {
-  if (getApps().length) return getApp();
+let adminAuthInstance: Auth | null = null;
+
+function initAdminApp(): Auth {
+  if (adminAuthInstance) return adminAuthInstance;
 
   const serviceAccount = buildServiceAccount();
 
   try {
-    if (serviceAccount) {
-      return initializeApp({
-        credential: cert(serviceAccount),
-        projectId: serviceAccount.projectId,
-      });
-    }
+    const app =
+      getApps().length > 0
+        ? getApp()
+        : serviceAccount && serviceAccount.projectId && serviceAccount.clientEmail && serviceAccount.privateKey
+        ? initializeApp({
+            credential: cert(serviceAccount),
+            projectId: serviceAccount.projectId,
+          })
+        : initializeApp({ credential: applicationDefault() });
 
-    console.warn(
-      "FB_* env vars not set; falling back to applicationDefault credentials"
-    );
-    return initializeApp({ credential: applicationDefault() });
+    adminAuthInstance = getAuth(app);
+    return adminAuthInstance;
   } catch (err) {
     console.error("Failed to initialize Firebase Admin SDK", err);
     throw err;
   }
 }
 
-export const firebaseAdminApp = initAdminApp();
-export const adminAuth = getAuth(firebaseAdminApp);
+export const getAdminAuth = () => initAdminApp();
 
 export async function verifyFirebaseToken(token: string): Promise<DecodedIdToken> {
-  return adminAuth.verifyIdToken(token);
+  const auth = getAdminAuth();
+  return auth.verifyIdToken(token);
 }
 
 export async function setUserRole(uid: string, role: string) {
-  await adminAuth.setCustomUserClaims(uid, { role });
+  const auth = getAdminAuth();
+  await auth.setCustomUserClaims(uid, { role });
 }

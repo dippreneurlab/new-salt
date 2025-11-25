@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { adminAuth, setUserRole, verifyFirebaseToken } from '@/lib/firebaseAdmin';
+import { setUserRole, verifyFirebaseToken } from '@/lib/firebaseAdmin';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
