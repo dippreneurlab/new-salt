@@ -77,7 +77,11 @@ export default function SignUp({ onSignUp, onBackToLogin }: SignUpProps) {
     setIsSubmitting(true);
 
     try {
-      const credential = await createUserWithEmailAndPassword(firebaseAuth, formData.email, formData.password);
+      const auth = firebaseAuth;
+      if (!auth) {
+        throw new Error('Firebase auth not configured');
+      }
+      const credential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
       await updateProfile(credential.user, { displayName: `${formData.firstName} ${formData.lastName}` });
 
       onSignUp({

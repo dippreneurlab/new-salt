@@ -43,7 +43,11 @@ export default function Login({ onLogin, onShowSignUp }: LoginProps) {
     setIsSubmitting(true);
 
     try {
-      const credential = await signInWithEmailAndPassword(firebaseAuth, formData.email, formData.password);
+      const auth = firebaseAuth;
+      if (!auth) {
+        throw new Error('Firebase auth not configured');
+      }
+      const credential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
       const authedUser = credential.user;
       const name = authedUser.displayName || authedUser.email?.split('@')[0] || 'User';
       onLogin({
