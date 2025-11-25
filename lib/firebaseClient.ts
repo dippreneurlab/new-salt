@@ -12,17 +12,28 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FB_APP_ID || "",
 } as const;
 
-// Initialize the app once per browser session
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+let authInstance: Auth | null = null;
 
-/**
- * Safe client-only getter.
- * Always returns a concrete Auth
- * and throws if called on the server.
- */
 export function getClientAuth(): Auth {
   if (typeof window === "undefined") {
     throw new Error("Firebase Auth can only be used on the client");
   }
-  return getAuth(app);
+
+  if (authInstance) return authInstance;
+
+  const missing = Object.entries(firebaseConfig)
+    .filter(([, v]) => !v)
+    .map(([k]) => k);
+
+  if (missing.length) {
+    throw new Error(
+      `Firebase client config missing: ${missing.join(
+        ", "
+      )}. Populate NEXT_PUBLIC_* variables in the browser runtime.`
+    );
+  }
+
+  const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  authInstance = getAuth(app);
+  return authInstance;
 }

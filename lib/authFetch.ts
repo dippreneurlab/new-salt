@@ -1,7 +1,7 @@
 // Client-only helper for authenticated fetch calls.
 'use client';
 
-import { firebaseAuth } from './firebaseClient';
+import { getClientAuth } from './firebaseClient';
 
 /**
  * Adds the current Firebase ID token as an Authorization header
@@ -9,7 +9,8 @@ import { firebaseAuth } from './firebaseClient';
  * is not authenticated.
  */
 export const authFetch = async (input: RequestInfo | URL, init: RequestInit = {}) => {
-  const user = firebaseAuth.currentUser;
+  const auth = getClientAuth();
+  const user = auth.currentUser;
   if (!user) {
     throw new Error('User not authenticated');
   }

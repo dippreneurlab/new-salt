@@ -26,15 +26,10 @@ export const getUserFromRequest = async (
 
     console.log("DECODED =", decoded);
 
-    const adminEmails = (process.env.ADMIN_EMAILS || "")
-      .split(",")
-      .map((e) => e.trim().toLowerCase())
-      .filter(Boolean);
-
+    // Prefer custom claim role; fallback to "user".
+    const roleClaim = decoded.role;
     const role: "admin" | "pm" | "user" =
-      decoded.email && adminEmails.includes(decoded.email.toLowerCase())
-        ? "admin"
-        : "user";
+      roleClaim === "admin" || roleClaim === "pm" ? roleClaim : "user";
 
     return { uid: decoded.uid, email: decoded.email, role };
   } catch (err) {

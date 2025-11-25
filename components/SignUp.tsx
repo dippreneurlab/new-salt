@@ -7,10 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import BrandedHeader from './BrandedHeader';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { firebaseAuth } from '@/lib/firebaseClient';
+import { getClientAuth } from '@/lib/firebaseClient';
 
 interface SignUpProps {
-  onSignUp: (userData: { email: string; name: string; firstName: string; lastName: string }) => void;
+  onSignUp: (userData: { email: string; name: string; firstName: string; lastName: string; role: 'admin' | 'pm' | 'user' }) => void;
   onBackToLogin: () => void;
 }
 
@@ -77,18 +77,18 @@ export default function SignUp({ onSignUp, onBackToLogin }: SignUpProps) {
     setIsSubmitting(true);
 
     try {
-      const auth = firebaseAuth;
-      if (!auth) {
-        throw new Error('Firebase auth not configured');
-      }
+      const auth = getClientAuth();
       const credential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
       await updateProfile(credential.user, { displayName: `${formData.firstName} ${formData.lastName}` });
 
+      const token = await credential.user.getIdTokenResult(true);
+      const roleClaim = (token.claims.role as string) || 'user';
       onSignUp({
         email: formData.email,
         name: `${formData.firstName} ${formData.lastName}`,
         firstName: formData.firstName,
-        lastName: formData.lastName
+        lastName: formData.lastName,
+        role: roleClaim as 'admin' | 'pm' | 'user'
       });
     } catch (error) {
       console.error('Error creating Firebase account:', error);

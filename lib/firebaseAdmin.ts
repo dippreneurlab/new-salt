@@ -8,7 +8,7 @@ import {
   initializeApp,
   ServiceAccount,
 } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
+import { getAuth, type DecodedIdToken } from "firebase-admin/auth";
 
 function buildServiceAccount(): ServiceAccount | null {
   const projectId = process.env.FB_PROJECT_ID;
@@ -52,6 +52,10 @@ function initAdminApp() {
 export const firebaseAdminApp = initAdminApp();
 export const adminAuth = getAuth(firebaseAdminApp);
 
-export async function verifyFirebaseToken(token: string) {
+export async function verifyFirebaseToken(token: string): Promise<DecodedIdToken> {
   return adminAuth.verifyIdToken(token);
+}
+
+export async function setUserRole(uid: string, role: string) {
+  await adminAuth.setCustomUserClaims(uid, { role });
 }

@@ -18,7 +18,7 @@ import BrandedHeader from '../components/BrandedHeader';
 import { saveQuote, loadQuote, deleteQuote } from '../utils/quoteManager';
 import { cloudStorage, hydrateCloudStorage, clearCloudStorageCache } from '@/lib/cloudStorage';
 import { getClientAuth } from '@/lib/firebaseClient';
-import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
+import { onAuthStateChanged, signOut as firebaseSignOut, type IdTokenResult } from 'firebase/auth';
 
 // Your interfaces remain unchanged
 export interface Project {
@@ -105,7 +105,7 @@ export interface QuoteData {
 export default function Home() {
 
   // AUTHENTICATION STATE
-  const [user, setUser] = useState<{ email: string; name: string; role?: string; department?: string } | null>(null);
+const [user, setUser] = useState<{ email: string; name: string; role: 'admin' | 'pm' | 'user'; department?: string } | null>(null);
   const [currentView, setCurrentView] = useState<
     'login' | 'signup' | 'tools-selection' | 'dashboard' |
     'quote-editor' | 'project-management' | 'project-management-hub' |
@@ -134,7 +134,7 @@ export default function Home() {
   const [scrollTaskId, setScrollTaskId] = useState<string | null>(null);
 
   // --------------------------
-  // FIXED AUTH LISTENER
+  // AUTH LISTENER WITH ROLE CLAIMS
   // --------------------------
 
   useEffect(() => {
@@ -148,9 +148,12 @@ export default function Home() {
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        const token: IdTokenResult = await firebaseUser.getIdTokenResult(true);
+        const roleClaim = (token.claims.role as string) || 'user';
         const userData = {
           email: firebaseUser.email || '',
-          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User'
+          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+          role: roleClaim as 'admin' | 'pm' | 'user'
         };
 
         setUser(userData);

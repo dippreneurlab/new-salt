@@ -7,10 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import BrandedHeader from './BrandedHeader';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { firebaseAuth } from '@/lib/firebaseClient';
+import { getClientAuth } from '@/lib/firebaseClient';
 
 interface LoginProps {
-  onLogin: (userData: { email: string; name: string }) => void;
+  onLogin: (userData: { email: string; name: string; role: 'admin' | 'pm' | 'user' }) => void;
   onShowSignUp: () => void;
 }
 
@@ -43,16 +43,19 @@ export default function Login({ onLogin, onShowSignUp }: LoginProps) {
     setIsSubmitting(true);
 
     try {
-      const auth = firebaseAuth;
+      const auth = getClientAuth();
       if (!auth) {
         throw new Error('Firebase auth not configured');
       }
       const credential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
       const authedUser = credential.user;
+      const token = await authedUser.getIdTokenResult(true);
+      const roleClaim = (token.claims.role as string) || 'user';
       const name = authedUser.displayName || authedUser.email?.split('@')[0] || 'User';
       onLogin({
         email: authedUser.email || formData.email,
-        name: name.charAt(0).toUpperCase() + name.slice(1)
+        name: name.charAt(0).toUpperCase() + name.slice(1),
+        role: roleClaim as 'admin' | 'pm' | 'user'
       });
     } catch (err) {
       console.error('Firebase sign-in failed', err);

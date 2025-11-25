@@ -1,6 +1,6 @@
 'use client';
 
-import { firebaseAuth } from './firebaseClient';
+import { getClientAuth } from './firebaseClient';
 import { getAllStorageItems, getStorageItem, removeStorageItem, setStorageItem } from './cloudStorageClient';
 
 const cache = new Map<string, any>();
@@ -9,7 +9,8 @@ let hydrating: Promise<void> | null = null;
 
 const ensureHydration = async () => {
   if (hydrated) return;
-  if (!firebaseAuth.currentUser) {
+  const auth = getClientAuth();
+  if (!auth.currentUser) {
     cache.clear();
     hydrated = true;
     return;

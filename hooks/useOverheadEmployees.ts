@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { firebaseAuth } from '@/lib/firebaseClient';
+import { getClientAuth } from '@/lib/firebaseClient';
 import { authFetch } from '@/lib/authFetch';
 import { 
   OverheadRow, 
@@ -28,7 +28,8 @@ export interface UseOverheadEmployeesReturn {
 }
 
 const fetchWithAuth = async (path: string, init: RequestInit = {}) => {
-  const user = firebaseAuth.currentUser;
+  const auth = getClientAuth();
+  const user = auth.currentUser;
   if (!user) throw new Error('Please sign in to load overhead data');
   const headers = new Headers(init.headers || {});
   headers.set('Content-Type', 'application/json');
