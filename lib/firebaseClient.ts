@@ -2,7 +2,7 @@
 'use client';
 
 import { getApp, getApps, initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, type Auth } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FB_API_KEY,
@@ -17,16 +17,21 @@ const missingKeys = Object.entries(firebaseConfig)
   .filter(([, value]) => !value)
   .map(([key]) => key);
 
-if (missingKeys.length) {
-  // Throw only on the client at runtime to avoid silent failures.
-  throw new Error(
-    `Firebase client config missing: ${missingKeys.join(
-      ', '
-    )}. Populate NEXT_PUBLIC_* environment variables in the browser runtime.`
-  );
+let appInstance: ReturnType<typeof initializeApp> | null = null;
+let authInstance: Auth | null = null;
+
+if (typeof window !== 'undefined') {
+  if (missingKeys.length) {
+    console.warn(
+      `Firebase client config missing: ${missingKeys.join(
+        ', '
+      )}. Populate NEXT_PUBLIC_* variables in the browser runtime.`
+    );
+  } else {
+    appInstance = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    authInstance = getAuth(appInstance);
+  }
 }
 
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-
-export const firebaseApp = app;
-export const firebaseAuth = getAuth(app);
+export const firebaseApp = appInstance;
+export const firebaseAuth = authInstance as Auth | null;
