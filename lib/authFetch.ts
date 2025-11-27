@@ -2,10 +2,10 @@
 'use client';
 
 import { getClientAuth } from './firebaseClient';
-
-const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5010').replace(/\/$/, '');
+import { getApiBase } from './apiBase';
 
 const resolveUrl = (input: RequestInfo | URL): RequestInfo | URL => {
+  const apiBase = getApiBase();
   if (typeof input === 'string' && input.startsWith('/') && apiBase) {
     return `${apiBase}${input}`;
   }

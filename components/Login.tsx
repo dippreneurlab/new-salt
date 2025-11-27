@@ -16,7 +16,10 @@ interface LoginProps {
 
 declare global {
   interface Window {
-    grecaptcha?: any;
+    turnstile?: {
+      render: (container: HTMLElement, options: Record<string, any>) => string;
+      reset: (id?: string) => void;
+    };
   }
 }
 
@@ -28,24 +31,24 @@ export default function Login({ onLogin, onShowSignUp }: LoginProps) {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [recaptchaReady, setRecaptchaReady] = useState(false);
-  const [recaptchaToken, setRecaptchaToken] = useState('');
+  const [turnstileReady, setTurnstileReady] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
 
-  const recaptchaRef = useRef<HTMLDivElement | null>(null);
-  const recaptchaWidgetId = useRef<number | null>(null);
-  const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+  const turnstileRef = useRef<HTMLDivElement | null>(null);
+  const turnstileWidgetId = useRef<string | null>(null);
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
-  // Load Google reCAPTCHA script
+  // Load Cloudflare Turnstile script
   useEffect(() => {
-    if (!recaptchaSiteKey) return;
+    if (!turnstileSiteKey) return;
 
-    const onReady = () => setRecaptchaReady(true);
+    const onReady = () => setTurnstileReady(true);
     const existing = document.querySelector<HTMLScriptElement>(
-      'script[src="https://www.google.com/recaptcha/api.js?render=explicit"]'
+      'script[src="https://challenges.cloudflare.com/turnstile/v0/api.js"]'
     );
 
     if (existing) {
-      if (window.grecaptcha) {
+      if (window.turnstile) {
         onReady();
       } else {
         existing.addEventListener('load', onReady, { once: true });
@@ -55,7 +58,7 @@ export default function Login({ onLogin, onShowSignUp }: LoginProps) {
     }
 
     const script = document.createElement('script');
-    script.src = 'https://www.google.com/recaptcha/api.js?render=explicit';
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
     script.async = true;
     script.defer = true;
     script.addEventListener('load', onReady, { once: true });
@@ -64,34 +67,38 @@ export default function Login({ onLogin, onShowSignUp }: LoginProps) {
     return () => {
       script.removeEventListener('load', onReady);
     };
-  }, [recaptchaSiteKey]);
+  }, [turnstileSiteKey]);
 
-  // Render reCAPTCHA widget once ready
+  // Render Turnstile widget once ready
   useEffect(() => {
-    if (!recaptchaReady || !recaptchaSiteKey || !recaptchaRef.current || !window.grecaptcha) return;
-    if (recaptchaWidgetId.current !== null) return;
+    if (!turnstileReady || !turnstileSiteKey || !turnstileRef.current || !window.turnstile) return;
+    if (turnstileWidgetId.current !== null) return;
 
-    recaptchaWidgetId.current = window.grecaptcha.render(recaptchaRef.current, {
-      sitekey: recaptchaSiteKey,
+    turnstileWidgetId.current = window.turnstile.render(turnstileRef.current, {
+      sitekey: turnstileSiteKey,
       callback: (token: string) => {
-        setRecaptchaToken(token);
+        setTurnstileToken(token);
         setErrors(prev => ({ ...prev, recaptcha: '' }));
       },
       'expired-callback': () => {
-        setRecaptchaToken('');
+        setTurnstileToken('');
         setErrors(prev => ({ ...prev, recaptcha: 'Captcha expired, please try again.' }));
       },
+      'timeout-callback': () => {
+        setTurnstileToken('');
+        setErrors(prev => ({ ...prev, recaptcha: 'Captcha timed out, please try again.' }));
+      },
       'error-callback': () => {
-        setRecaptchaToken('');
+        setTurnstileToken('');
         setErrors(prev => ({ ...prev, recaptcha: 'Captcha failed to load. Please refresh and try again.' }));
       }
     });
-  }, [recaptchaReady, recaptchaSiteKey]);
+  }, [turnstileReady, turnstileSiteKey]);
 
-  const resetRecaptcha = () => {
-    if (recaptchaWidgetId.current !== null && window.grecaptcha?.reset) {
-      window.grecaptcha.reset(recaptchaWidgetId.current);
-      setRecaptchaToken('');
+  const resetTurnstile = () => {
+    if (turnstileWidgetId.current && window.turnstile?.reset) {
+      window.turnstile.reset(turnstileWidgetId.current);
+      setTurnstileToken('');
     }
   };
 
@@ -104,14 +111,14 @@ export default function Login({ onLogin, onShowSignUp }: LoginProps) {
     const newErrors: { [key: string]: string } = {};
     if (!formData.email) newErrors.email = 'Email is required';
     if (!formData.password) newErrors.password = 'Password is required';
-    if (recaptchaSiteKey && !recaptchaToken) {
-      newErrors.recaptcha = recaptchaReady
+    if (turnstileSiteKey && !turnstileToken) {
+      newErrors.recaptcha = turnstileReady
         ? 'Please complete the captcha'
         : 'Captcha is still loading, please wait a moment';
     }
     
     if (Object.keys(newErrors).length > 0) {
-      if (newErrors.recaptcha) resetRecaptcha();
+      if (newErrors.recaptcha) resetTurnstile();
       setErrors(newErrors);
       return;
     }
@@ -136,7 +143,7 @@ export default function Login({ onLogin, onShowSignUp }: LoginProps) {
     } catch (err) {
       console.error('Firebase sign-in failed', err);
       setFormError('Unable to sign in. Check your credentials and try again.');
-      resetRecaptcha();
+      resetTurnstile();
     } finally {
       setIsSubmitting(false);
     }
@@ -192,11 +199,10 @@ export default function Login({ onLogin, onShowSignUp }: LoginProps) {
                 )}
               </div>
 
-              {recaptchaSiteKey ? (
+              {turnstileSiteKey ? (
                 <div className="space-y-2">
-                  <Label>Human Check</Label>
                   <div className="rounded-md border border-gray-200 p-3 bg-gray-50">
-                    <div ref={recaptchaRef} className="flex justify-center" />
+                    <div ref={turnstileRef} className="flex justify-center" />
                   </div>
                   {errors.recaptcha && (
                     <p className="text-sm text-red-600">{errors.recaptcha}</p>
@@ -204,7 +210,7 @@ export default function Login({ onLogin, onShowSignUp }: LoginProps) {
                 </div>
               ) : (
                 <p className="text-sm text-amber-600">
-                  reCAPTCHA key missing. Add NEXT_PUBLIC_RECAPTCHA_SITE_KEY to enable bot protection.
+                  Turnstile key missing. Add NEXT_PUBLIC_TURNSTILE_SITE_KEY to enable bot protection.
                 </p>
               )}
 

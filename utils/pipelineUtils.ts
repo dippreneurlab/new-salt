@@ -10,6 +10,8 @@ export const DEFAULT_CLIENT_LIST = [
   'Mercedes Benz', 'Microsoft CAN', 'Microsoft USA', 'NBD - Canada', 'NBD - US', 'Other - Canada', 'Other - US', 'Pointsbet',
   'RBC', 'Rona', 'Sephora', 'Shopify', 'The Kitchen', 'Toyota', 'Unilever'
 ];
+// Legacy alias for components expecting camelCase default client options
+export const DEFAULT_clientOptions = DEFAULT_CLIENT_LIST;
 
 export const DEFAULT_RATE_CARD_MAP: Record<string, string> = {
   'Labatt': 'Labatt',
