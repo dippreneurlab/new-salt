@@ -1,4 +1,4 @@
-name: GCP Cloud Run Frontend CI CD
+name: Salt QuoteHub Frontend CI CD
 
 on:
   push:
