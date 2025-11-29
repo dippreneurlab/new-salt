@@ -5,6 +5,7 @@ import { createQuoteFromPipeline } from '@/utils/quoteManager';
 import { useOverheadEmployees } from '../hooks/useOverheadEmployees';
 import { usePipelineMetadata } from '@/hooks/usePipelineMetadata';
 import { cloudStorage } from '@/lib/cloudStorage';
+import { authFetch } from '@/lib/authFetch';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1483,6 +1484,15 @@ export default function Pipeline({ user, onLogout, onBack, userView = 'Admin', i
     };
     appendPipelineLog(deletionLog);
 
+    // Call backend delete to remove from Cloud SQL for all users
+    authFetch('/api/pipeline', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectCode: entry.projectCode })
+    }).catch(err => {
+      console.error('Failed to delete pipeline entry in backend', err);
+    });
+
     // Remove from Quote Hub (Dashboard cloudStorage)
     try {
       const quotesData = cloudStorage.getItem('saltxc-quotes');
@@ -1550,6 +1560,15 @@ export default function Pipeline({ user, onLogout, onBack, userView = 'Admin', i
       } catch (err) {
         console.error('Failed to save change log:', err);
       }
+
+      // Call backend delete to remove from Cloud SQL for all users
+      authFetch('/api/pipeline', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectCode })
+      }).catch(err => {
+        console.error('Failed to delete pipeline entry in backend', err);
+      });
       
       // Remove from Quote Hub (Dashboard cloudStorage)
       try {
@@ -6490,8 +6509,9 @@ export default function Pipeline({ user, onLogout, onBack, userView = 'Admin', i
                   value={editForm.startMonth} 
                   onChange={(e) => setEditForm(prev => ({...prev, startMonth: e.target.value}))}
                   className="w-full"
+                  disabled
                 />
-                <p className="text-xs text-gray-500 mt-1">Select the project start date</p>
+                <p className="text-xs text-gray-500 mt-1">Start date is fixed after creation</p>
               </div>
               <div>
                 <Label>End Date</Label>
@@ -6500,8 +6520,9 @@ export default function Pipeline({ user, onLogout, onBack, userView = 'Admin', i
                   value={editForm.endMonth} 
                   onChange={(e) => setEditForm(prev => ({...prev, endMonth: e.target.value}))}
                   className="w-full"
+                  disabled
                 />
-                <p className="text-xs text-gray-500 mt-1">Select the project end date</p>
+                <p className="text-xs text-gray-500 mt-1">End date is fixed after creation</p>
               </div>
               <div>
                 <Label>Revenue</Label>
