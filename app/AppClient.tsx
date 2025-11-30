@@ -12,6 +12,7 @@ import ToolsSelection from '../components/ToolsSelection';
 import ProjectManagement from '../components/ProjectManagement';
 import PMDashboard from '../components/PMDashboard';
 import PersonDashboard from '../components/PersonDashboard';
+import UserManagement from '../components/UserManagement';
 import Pipeline from '../components/Pipeline';
 import ThreeInOne from '../components/ThreeInOne';
 import BrandedHeader from '../components/BrandedHeader';
@@ -105,11 +106,11 @@ export interface QuoteData {
 export default function Home() {
 
   // AUTHENTICATION STATE
-const [user, setUser] = useState<{ email: string; name: string; role: 'admin' | 'pm' | 'user'; department?: string } | null>(null);
+  const [user, setUser] = useState<{ email: string; name: string; role: 'admin' | 'pm' | 'user'; department?: string } | null>(null);
   const [currentView, setCurrentView] = useState<
     'login' | 'signup' | 'tools-selection' | 'dashboard' |
     'quote-editor' | 'project-management' | 'project-management-hub' |
-    'person-dashboard' | 'pipeline' | 'three-in-one'
+    'person-dashboard' | 'pipeline' | 'three-in-one' | 'user-management'
   >('login');
 
   const [storageReady, setStorageReady] = useState(false);
@@ -233,7 +234,18 @@ const [user, setUser] = useState<{ email: string; name: string; role: 'admin' | 
         onSelectProjectManagement={() => setCurrentView('project-management-hub')}
         onSelectPipeline={() => setCurrentView('pipeline')}
         onSelectThreeInOne={() => setCurrentView('three-in-one')}
+        onSelectUserManagement={() => setCurrentView('user-management')}
         onUserViewChange={setUserView}
+      />
+    );
+  }
+
+  if (currentView === 'user-management') {
+    return (
+      <UserManagement
+        user={user!}
+        onLogout={handleLogout}
+        onBackToHub={() => setCurrentView('tools-selection')}
       />
     );
   }

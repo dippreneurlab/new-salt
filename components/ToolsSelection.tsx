@@ -18,6 +18,7 @@ interface ToolsSelectionProps {
   onSelectProjectManagement?: () => void;
   onSelectPipeline?: () => void;
   onSelectThreeInOne?: () => void;
+  onSelectUserManagement?: () => void;
   onUserViewChange?: (view: 'Admin' | 'Business Owner' | 'Team Member') => void;
 }
 
@@ -45,10 +46,19 @@ const tools = [
     icon: '/icons/reporting.svg',
     enabled: true,
     comingSoon: false
+  },
+  {
+    id: 'user-management',
+    title: 'User Management',
+    description: 'Create, assign roles, or remove accounts in Firebase Auth',
+    icon: '/icons/resource-management.svg',
+    enabled: true,
+    comingSoon: false,
+    requiresAdmin: true
   }
 ];
 
-export default function ToolsSelection({ user, onLogout, onSelectQuoteHub, onSelectProjectManagement, onSelectPipeline, onSelectThreeInOne, onUserViewChange }: ToolsSelectionProps) {
+export default function ToolsSelection({ user, onLogout, onSelectQuoteHub, onSelectProjectManagement, onSelectPipeline, onSelectThreeInOne, onSelectUserManagement, onUserViewChange }: ToolsSelectionProps) {
   const [userView, setUserView] = useState<'Admin' | 'Business Owner' | 'Team Member'>('Admin');
 
   const handleUserViewChange = (view: 'Admin' | 'Business Owner' | 'Team Member') => {
@@ -82,12 +92,21 @@ export default function ToolsSelection({ user, onLogout, onSelectQuoteHub, onSel
       onSelectThreeInOne();
       return;
     }
+    if (toolId === 'user-management' && onSelectUserManagement) {
+      console.log('✅ Navigating to user-management');
+      onSelectUserManagement();
+      return;
+    }
     console.log('❌ No handler found for tool:', toolId);
     // Other tools are disabled, so no action needed
   };
 
   // Filter tools based on user view and role
   const visibleTools = tools.filter(tool => {
+    if (tool.requiresAdmin && user.role !== 'admin') {
+      return false;
+    }
+
     // Team Members don't see Business Pipeline
     if (userView === 'Team Member' && tool.id === 'pipeline') {
       return false;
