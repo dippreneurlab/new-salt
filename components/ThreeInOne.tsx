@@ -16,7 +16,7 @@ import QuoteReview from './QuoteReview';
 import { Poppins } from 'next/font/google';
 import { cloudStorage } from '@/lib/cloudStorage';
 import { authFetch } from '@/lib/authFetch';
-import { upsertQuoteDraft } from '@/lib/quotesApiClient';
+import { fetchQuotes, upsertQuoteDraft } from '@/lib/quotesApiClient';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -391,106 +391,127 @@ export default function ThreeInOne({
   // Extract resource roles from selected quote
   useEffect(() => {
     if (selectedProjectId && projectSubView === 'resourcing') {
-      console.log('🔍 Loading resourcing data for project:', selectedProjectId);
-      
-      const quotes = JSON.parse(cloudStorage.getItem('saltxc-all-quotes') || '[]');
-      console.log('📦 All quotes:', quotes.length);
-      
-      // Find all quotes for this project
-      const projectQuotes = quotes.filter((q: any) => 
-        q.projectNumber === selectedProjectId || 
-        q.id === selectedProjectId ||
-        (selectedProjectDetails && q.projectNumber === selectedProjectDetails.projectCode)
-      );
-      
-      console.log('📋 Project quotes found:', projectQuotes.length, projectQuotes.map((q: any) => q.id));
-      
-      if (projectQuotes.length > 0) {
-        const newAssignments: typeof resourceAssignments = {};
+      const loadResourcing = async () => {
+        console.log('🔍 Loading resourcing data for project:', selectedProjectId);
         
-        // Process all quotes for this project
-        projectQuotes.forEach((quote: any) => {
-          console.log('🔄 Processing quote:', quote.id, 'phaseData:', quote.phaseData);
-          
-          if (quote.phaseData) {
-            // Extract roles from all phases
-            Object.keys(quote.phaseData).forEach((phase) => {
-              if (!newAssignments[phase]) {
-                newAssignments[phase] = {};
-              }
-              
-              const stages = quote.phaseData[phase] || [];
-              console.log(`📊 Phase "${phase}" has ${stages.length} stages`);
-              
-              stages.forEach((stage: any) => {
-                console.log('  Stage departments:', stage.departments?.length || 0);
-                stage.departments?.forEach((dept: any) => {
-                  if (!newAssignments[phase][dept.name]) {
-                    newAssignments[phase][dept.name] = [];
-                  }
-                  
-                  console.log(`    Dept "${dept.name}" has ${dept.roles?.length || 0} roles`);
-                  dept.roles?.forEach((role: any) => {
-                    console.log(`      Role: ${role.name}, weeks: ${role.weeks}, allocation: ${role.allocation}, hours: ${role.hours}`);
-                    
-                    // Check if this role already exists
-                    const existing = newAssignments[phase][dept.name].find(
-                      r => r.roleName === role.name
-                    );
-                    
-                    if (existing) {
-                      // Aggregate weeks and hours
-                      existing.weeks += role.weeks || 0;
-                      existing.hours += role.hours || 0;
-                      console.log(`      ✓ Aggregated to existing role: weeks=${existing.weeks}, hours=${existing.hours}`);
-                    } else {
-                      // Add new role
-                      newAssignments[phase][dept.name].push({
-                        roleName: role.name,
-                        allocation: role.allocation || 100,
-                        weeks: role.weeks || 0,
-                        hours: role.hours || 0,
-                        assignee: '',
-                        startDate: '',
-                        endDate: ''
-                      });
-                      console.log(`      ✓ Added new role`);
-                    }
-                  });
-                });
-              });
-            });
-            
-            // Load existing assignments from pmData if available
-            if (quote.pmData && quote.pmData.resourceAssignments) {
-              console.log('💾 Loading existing assignments from pmData');
-              Object.keys(quote.pmData.resourceAssignments).forEach((phase) => {
-                Object.keys(quote.pmData.resourceAssignments[phase]).forEach((dept) => {
-                  quote.pmData.resourceAssignments[phase][dept]?.forEach((assignment: any) => {
-                    if (newAssignments[phase] && newAssignments[phase][dept]) {
-                      const role = newAssignments[phase][dept].find(
-                        r => r.roleName === assignment.roleName
-                      );
-                      if (role) {
-                        role.assignee = assignment.assignee || '';
-                        role.startDate = assignment.startDate || '';
-                        role.endDate = assignment.endDate || '';
-                        console.log(`  ✓ Loaded assignee for ${assignment.roleName}: ${role.assignee}`);
-                      }
-                    }
-                  });
-                });
-              });
-            }
+        let quotes: any[] = [];
+        try {
+          quotes = JSON.parse(cloudStorage.getItem('saltxc-all-quotes') || '[]') || [];
+        } catch {
+          quotes = [];
+        }
+
+        // If nothing locally, pull from backend to hydrate and avoid empty state
+        if (!quotes.length) {
+          try {
+            const remoteQuotes = await fetchQuotes();
+            cloudStorage.setItem('saltxc-all-quotes', JSON.stringify(remoteQuotes));
+            quotes = remoteQuotes;
+          } catch (err) {
+            console.error('❌ Failed to fetch quotes for resourcing', err);
           }
-        });
+        }
+
+        console.log('📦 All quotes:', quotes.length);
         
-        console.log('✅ Final resource assignments:', newAssignments);
-        setResourceAssignments(newAssignments);
-      } else {
-        console.warn('⚠️ No quotes found for project:', selectedProjectId);
-        setResourceAssignments({});
-      }
+        // Find all quotes for this project
+        const projectQuotes = quotes.filter((q: any) => 
+          q.projectNumber === selectedProjectId || 
+          q.id === selectedProjectId ||
+          (selectedProjectDetails && q.projectNumber === selectedProjectDetails.projectCode)
+        );
+        
+        console.log('📋 Project quotes found:', projectQuotes.length, projectQuotes.map((q: any) => q.id));
+        
+        if (projectQuotes.length > 0) {
+          const newAssignments: typeof resourceAssignments = {};
+          
+          // Process all quotes for this project
+          projectQuotes.forEach((quote: any) => {
+            console.log('🔄 Processing quote:', quote.id, 'phaseData:', quote.phaseData);
+            
+            if (quote.phaseData) {
+              // Extract roles from all phases
+              Object.keys(quote.phaseData).forEach((phase) => {
+                if (!newAssignments[phase]) {
+                  newAssignments[phase] = {};
+                }
+                
+                const stages = quote.phaseData[phase] || [];
+                console.log(`📊 Phase "${phase}" has ${stages.length} stages`);
+                
+                stages.forEach((stage: any) => {
+                  console.log('  Stage departments:', stage.departments?.length || 0);
+                  stage.departments?.forEach((dept: any) => {
+                    if (!newAssignments[phase][dept.name]) {
+                      newAssignments[phase][dept.name] = [];
+                    }
+                    
+                    console.log(`    Dept "${dept.name}" has ${dept.roles?.length || 0} roles`);
+                    dept.roles?.forEach((role: any) => {
+                      console.log(`      Role: ${role.name}, weeks: ${role.weeks}, allocation: ${role.allocation}, hours: ${role.hours}`);
+                      
+                      // Check if this role already exists
+                      const existing = newAssignments[phase][dept.name].find(
+                        r => r.roleName === role.name
+                      );
+                      
+                      if (existing) {
+                        // Aggregate weeks and hours
+                        existing.weeks += role.weeks || 0;
+                        existing.hours += role.hours || 0;
+                        console.log(`      ✓ Aggregated to existing role: weeks=${existing.weeks}, hours=${existing.hours}`);
+                      } else {
+                        // Add new role
+                        newAssignments[phase][dept.name].push({
+                          roleName: role.name,
+                          allocation: role.allocation || 100,
+                          weeks: role.weeks || 0,
+                          hours: role.hours || 0,
+                          assignee: '',
+                          startDate: '',
+                          endDate: ''
+                        });
+                        console.log(`      ✓ Added new role`);
+                      }
+                    });
+                  });
+                });
+              });
+              
+              // Load existing assignments from pmData if available
+              if (quote.pmData && quote.pmData.resourceAssignments) {
+                console.log('💾 Loading existing assignments from pmData');
+                Object.keys(quote.pmData.resourceAssignments).forEach((phase) => {
+                  Object.keys(quote.pmData.resourceAssignments[phase]).forEach((dept) => {
+                    quote.pmData.resourceAssignments[phase][dept]?.forEach((assignment: any) => {
+                      if (newAssignments[phase] && newAssignments[phase][dept]) {
+                        const role = newAssignments[phase][dept].find(
+                          r => r.roleName === assignment.roleName
+                        );
+                        if (role) {
+                          role.assignee = assignment.assignee || '';
+                          role.startDate = assignment.startDate || '';
+                          role.endDate = assignment.endDate || '';
+                          console.log(`  ✓ Loaded assignee for ${assignment.roleName}: ${role.assignee}`);
+                        }
+                      }
+                    });
+                  });
+                });
+              }
+            }
+          });
+          
+          console.log('✅ Final resource assignments:', newAssignments);
+          setResourceAssignments(newAssignments);
+        } else {
+          console.warn('⚠️ No quotes found for project:', selectedProjectId);
+          setResourceAssignments({});
+        }
+      };
+
+      void loadResourcing();
     }
   }, [selectedProjectId, projectSubView, selectedProjectDetails]);
 
