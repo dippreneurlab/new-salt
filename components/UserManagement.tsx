@@ -145,7 +145,7 @@ export default function UserManagement({ user, onLogout, onBackToHub }: UserMana
       const data = await res.json();
       setUsers((prev) => [data.user, ...prev]);
       setForm({ displayName: '', email: '', password: '', role: 'user', phoneNumber: '' });
-      setSuccess('User created in Firebase Auth.');
+      setSuccess('User created');
     } catch (err) {
       console.error('Create user failed', err);
       setError(err instanceof Error ? err.message : 'Unable to create user');
@@ -173,7 +173,7 @@ export default function UserManagement({ user, onLogout, onBackToHub }: UserMana
 
       const data = await res.json();
       setUsers((prev) => prev.map((u) => (u.uid === uid ? data.user : u)));
-      setSuccess('Role updated in Firebase Auth.');
+      setSuccess('Role updated');
     } catch (err) {
       console.error('Update role failed', err);
       setError(err instanceof Error ? err.message : 'Unable to update role');
@@ -188,7 +188,7 @@ export default function UserManagement({ user, onLogout, onBackToHub }: UserMana
       return;
     }
 
-    const confirmed = window.confirm('Delete this user from Firebase Auth?');
+    const confirmed = window.confirm('Delete this user?');
     if (!confirmed) return;
 
     setDeleteTarget(uid);
@@ -208,7 +208,7 @@ export default function UserManagement({ user, onLogout, onBackToHub }: UserMana
       }
 
       setUsers((prev) => prev.filter((u) => u.uid !== uid));
-      setSuccess('User deleted from Firebase Auth.');
+      setSuccess('User deleted');
     } catch (err) {
       console.error('Delete user failed', err);
       setError(err instanceof Error ? err.message : 'Unable to delete user');
@@ -258,9 +258,9 @@ export default function UserManagement({ user, onLogout, onBackToHub }: UserMana
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Firebase User Management</h1>
+            <h1 className="text-2xl font-semibold text-gray-900">User Management</h1>
             <p className="text-sm text-gray-600">
-              Directly manage accounts in Firebase Auth. Only @ilovesalt.com emails can be created.
+              Only @ilovesalt.com emails can be created.
             </p>
           </div>
           <div className="flex gap-2">
@@ -298,7 +298,7 @@ export default function UserManagement({ user, onLogout, onBackToHub }: UserMana
                 Create User
               </CardTitle>
               <CardDescription>
-                Admins can add new accounts directly to Firebase Auth with a Salt email.
+                Admins can add new accounts directly with a Salt email.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -377,7 +377,6 @@ export default function UserManagement({ user, onLogout, onBackToHub }: UserMana
             <CardHeader>
               <CardTitle>Existing Users</CardTitle>
               <CardDescription>
-                Data is pulled directly from Firebase Auth. Update roles or remove accounts instantly.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -387,7 +386,7 @@ export default function UserManagement({ user, onLogout, onBackToHub }: UserMana
                   Loading users...
                 </div>
               ) : users.length === 0 ? (
-                <p className="text-sm text-gray-600">No users found in Firebase Auth.</p>
+                <p className="text-sm text-gray-600">No users found</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">

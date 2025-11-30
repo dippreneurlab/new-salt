@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useRef } from 'react';
-import { authFetch } from '@/lib/authFetch';
+import { useEffect, useState, useRef } from 'react';
 import { getClientAuth } from '@/lib/firebaseClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,6 +42,15 @@ export default function AdminUpgradePage() {
   const addLog = (message: string) =>
     setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${message}`]);
 
+  const authedFetch = async (path: string, init: RequestInit = {}) => {
+    if (!currentUser) throw new Error('No signed-in user.');
+    const token = await currentUser.getIdToken();
+    const headers = new Headers(init.headers || {});
+    headers.set('Authorization', `Bearer ${token}`);
+    headers.set('Content-Type', 'application/json');
+    return fetch(path, { ...init, headers });
+  };
+
   const upgradeAll = async () => {
     setRunning(true);
     setError(null);
@@ -66,7 +74,7 @@ export default function AdminUpgradePage() {
     let users: ManagedUser[] = [];
 
     try {
-      const res = await authFetch('/api/users', { cache: 'no-store' });
+      const res = await authedFetch('/api/users', { cache: 'no-store' });
       if (!res.ok) {
         const data = await res.json().catch(() => null);
         throw new Error(data?.error || `Failed to load users (${res.status})`);
@@ -98,9 +106,8 @@ export default function AdminUpgradePage() {
     for (const user of toUpgrade) {
       addLog(`→ Setting ${user.email || user.uid} to admin…`);
       try {
-        const res = await authFetch('/api/users', {
+        const res = await authedFetch('/api/users', {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ uid: user.uid, role: 'admin' })
         });
         if (!res.ok) {
