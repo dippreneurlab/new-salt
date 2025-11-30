@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { authFetch } from '@/lib/authFetch';
 import { getClientAuth } from '@/lib/firebaseClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,12 +22,21 @@ export default function AdminUpgradePage() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [summary, setSummary] = useState('');
+  const [authReady, setAuthReady] = useState(false);
+  const [currentUser, setCurrentUser] = useState<ReturnType<typeof getClientAuth>['currentUser'] | null>(null);
+  const hasAutoRun = useRef(false);
 
-  const currentUser = useMemo(() => {
+  useEffect(() => {
     try {
-      return getClientAuth().currentUser;
+      const auth = getClientAuth();
+      const unsubscribe = auth.onAuthStateChanged((u) => {
+        setCurrentUser(u);
+        setAuthReady(true);
+      });
+      return () => unsubscribe();
     } catch {
-      return null;
+      setAuthReady(true);
+      setCurrentUser(null);
     }
   }, []);
 
@@ -40,6 +49,12 @@ export default function AdminUpgradePage() {
     setDone(false);
     setSummary('');
     setLogs([]);
+
+    if (!authReady) {
+      setError('Auth not ready yet. Please wait a moment.');
+      setRunning(false);
+      return;
+    }
 
     if (!currentUser) {
       setError('No signed-in user. Please log in first.');
@@ -107,10 +122,11 @@ export default function AdminUpgradePage() {
   };
 
   useEffect(() => {
-    // Run automatically on load so visiting the URL performs the upgrade.
-    upgradeAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (authReady && currentUser && !hasAutoRun.current) {
+      hasAutoRun.current = true;
+      upgradeAll();
+    }
+  }, [authReady, currentUser]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-12">
