@@ -24,7 +24,6 @@ interface ManagedUser {
   uid: string;
   email: string;
   displayName: string;
-  phoneNumber?: string;
   role: Role;
   disabled: boolean;
   createdAt?: string;
@@ -57,8 +56,7 @@ export default function UserManagement({ user, onLogout, onBackToHub }: UserMana
     displayName: '',
     email: '',
     password: '',
-    role: 'user' as Role,
-    phoneNumber: ''
+    role: 'user' as Role
   });
 
   const currentUid = useMemo(() => {
@@ -144,7 +142,7 @@ export default function UserManagement({ user, onLogout, onBackToHub }: UserMana
 
       const data = await res.json();
       setUsers((prev) => [data.user, ...prev]);
-      setForm({ displayName: '', email: '', password: '', role: 'user', phoneNumber: '' });
+      setForm({ displayName: '', email: '', password: '', role: 'user' });
       setSuccess('User created');
     } catch (err) {
       console.error('Create user failed', err);
@@ -334,16 +332,6 @@ export default function UserManagement({ user, onLogout, onBackToHub }: UserMana
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="phoneNumber">Phone (optional)</Label>
-                  <Input
-                    id="phoneNumber"
-                    type="tel"
-                    value={form.phoneNumber}
-                    onChange={(e) => setForm((prev) => ({ ...prev, phoneNumber: e.target.value }))}
-                    placeholder="+1 416 555 1234"
-                  />
-                </div>
-                <div className="space-y-2">
                   <Label>Role</Label>
                   <Select
                     value={form.role}
@@ -405,7 +393,6 @@ export default function UserManagement({ user, onLogout, onBackToHub }: UserMana
                         <tr key={item.uid} className="hover:bg-gray-50">
                           <td className="px-4 py-3">
                             <div className="font-medium text-gray-900">{item.displayName || '—'}</div>
-                            <div className="text-xs text-gray-500">{item.phoneNumber || 'No phone'}</div>
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-700">{item.email}</td>
                           <td className="px-4 py-3">

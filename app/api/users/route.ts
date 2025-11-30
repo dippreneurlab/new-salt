@@ -21,7 +21,6 @@ const buildUserPayload = (record: Awaited<ReturnType<ReturnType<typeof getAdminA
   uid: record.uid,
   email: record.email || '',
   displayName: record.displayName || '',
-  phoneNumber: record.phoneNumber || '',
   role: (record.customClaims?.role as string) || 'user',
   disabled: record.disabled,
   createdAt: record.metadata.creationTime,
@@ -56,7 +55,7 @@ export async function POST(request: Request) {
 
   const auth = getAdminAuth();
   const body = await request.json().catch(() => null);
-  const { email, password, displayName, role = 'user', phoneNumber } = body || {};
+  const { email, password, displayName, role = 'user' } = body || {};
 
   if (!email || !password) {
     return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
@@ -80,7 +79,6 @@ export async function POST(request: Request) {
       email,
       password,
       displayName,
-      phoneNumber,
       emailVerified: true,
     });
 

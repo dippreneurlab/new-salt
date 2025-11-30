@@ -6,6 +6,11 @@ import { getApiBase } from './apiBase';
 
 const resolveUrl = (input: RequestInfo | URL): RequestInfo | URL => {
   const apiBase = getApiBase();
+  // Always hit Next.js API routes on the same origin so we don't forward to the remote backend.
+  if (typeof input === 'string' && input.startsWith('/api/')) {
+    return input;
+  }
+
   if (typeof input === 'string' && input.startsWith('/') && apiBase) {
     return `${apiBase}${input}`;
   }

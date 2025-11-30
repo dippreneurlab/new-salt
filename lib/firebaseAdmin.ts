@@ -11,7 +11,8 @@ import {
 import { getAuth, type Auth, type DecodedIdToken } from "firebase-admin/auth";
 
 function buildServiceAccount(): ServiceAccount | null {
-  const projectId = process.env.FB_PROJECT_ID;
+  // Support either server-only or NEXT_PUBLIC project id envs (user requested NEXT_PUBLIC_FB_PROJECT_ID).
+  const projectId = process.env.FB_PROJECT_ID || process.env.NEXT_PUBLIC_FB_PROJECT_ID;
   const clientEmail = process.env.FB_CLIENT_EMAIL;
   let privateKey = process.env.FB_PRIVATE_KEY;
 
