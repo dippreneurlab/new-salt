@@ -20,6 +20,15 @@ const normalizeDate = (input: any): string | null => {
   return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
 };
 
+const firstValue = (...values: any[]) => {
+  for (const val of values) {
+    if (val === null || val === undefined) continue;
+    if (typeof val === 'string' && val.trim() === '') continue;
+    return val;
+  }
+  return null;
+};
+
 const ensureUser = async (userId: string, email?: string) => {
   const safeEmail = email || `${userId}@placeholder.local`;
   await query(
@@ -36,7 +45,7 @@ export const replaceQuotes = async (userId: string, quotes: any[], email?: strin
   await ensureUser(userId, email);
   for (const quote of quotes) {
     const project = quote.project || {};
-    const projectNumber = quote.projectNumber || project.projectNumber || '';
+    const projectNumber = firstValue(quote.projectNumber, project.projectNumber);
     const quoteUid: string = quote.id || `${projectNumber || 'quote'}-${userId}`;
     await query(
       `
@@ -85,19 +94,19 @@ export const replaceQuotes = async (userId: string, quotes: any[], email?: strin
       `,
       [
         quoteUid,
-        quote.projectNumber || project.projectNumber || '',
-        quote.clientName || '',
-        project.clientCategory || quote.clientCategory || '',
-        quote.brand || '',
-        quote.projectName || '',
-        normalizeDate(project.briefDate || quote.briefDate),
-        normalizeDate(project.inMarketDate || quote.inMarketDate),
-        normalizeDate(project.projectCompletionDate || quote.projectCompletionDate),
-        project.totalProgramBudget ?? quote.totalRevenue ?? null,
-        project.rateCard || quote.rateCard || null,
-        quote.currency || project.currency || 'CAD',
-        project.phases || [],
-        project.phaseSettings || {},
+        projectNumber,
+        firstValue(quote.clientName, project.clientName),
+        firstValue(project.clientCategory, quote.clientCategory),
+        firstValue(quote.brand, project.brand),
+        firstValue(quote.projectName, project.projectName),
+        normalizeDate(firstValue(project.briefDate, quote.briefDate)),
+        normalizeDate(firstValue(project.inMarketDate, quote.inMarketDate)),
+        normalizeDate(firstValue(project.projectCompletionDate, quote.projectCompletionDate)),
+        firstValue(project.totalProgramBudget, quote.totalRevenue),
+        firstValue(project.rateCard, quote.rateCard),
+        firstValue(quote.currency, project.currency, 'CAD'),
+        project.phases ?? [],
+        project.phaseSettings ?? {},
         quote.status || 'draft',
         userId,
         userId,

@@ -16,6 +16,7 @@ import QuoteReview from './QuoteReview';
 import { Poppins } from 'next/font/google';
 import { cloudStorage } from '@/lib/cloudStorage';
 import { authFetch } from '@/lib/authFetch';
+import { upsertQuoteDraft } from '@/lib/quotesApiClient';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -1755,13 +1756,18 @@ export default function ThreeInOne({
     };
   };
 
-  const persistQuoteState = (patch: any) => {
+  const persistQuoteState = async (patch: any) => {
     console.log('💾 persistQuoteState called:', {
       editingQuoteId,
       patchKeys: Object.keys(patch),
       patch
     });
-    
+
+    if (!editingQuoteId) {
+      console.warn('⚠️ No editingQuoteId set; skipping persist.');
+      return;
+    }
+
     setSaveStatus('saving');
     try {
       const quotesRaw = cloudStorage.getItem('saltxc-all-quotes');
@@ -1798,6 +1804,13 @@ export default function ThreeInOne({
         
         quotes[idx] = updatedQuote;
         cloudStorage.setItem('saltxc-all-quotes', JSON.stringify(quotes));
+
+        // Persist immediately to the backend so drafts are stored in DB
+        try {
+          await upsertQuoteDraft(editingQuoteId, updatedQuote);
+        } catch (persistErr) {
+          console.error('❌ Failed to persist quote to backend', persistErr);
+        }
         
         // refresh list cache too
         const projectQuotes = quotes.filter((qq: any) => (qq.projectNumber || '') === (selectedProjectDetails?.projectCode || ''));
@@ -2761,7 +2774,7 @@ export default function ThreeInOne({
                             <h3 className="text-base font-semibold text-gray-900">Quotes</h3>
                             <Button
                               className="h-8 px-3 text-xs"
-                              onClick={() => {
+                              onClick={async () => {
                                 // Create a new quote ID
                                 const newQuoteId = 'quote-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
                                 
@@ -2806,11 +2819,13 @@ export default function ThreeInOne({
                                   }
                                 };
                                 
-                                // Save to cloudStorage
+                                // Save to cloudStorage and backend
                                 try {
+                                  setSaveStatus('saving');
                                   const quotes = JSON.parse(cloudStorage.getItem('saltxc-all-quotes') || '[]');
                                   quotes.push(newQuote);
                                   cloudStorage.setItem('saltxc-all-quotes', JSON.stringify(quotes));
+                                  await upsertQuoteDraft(newQuoteId, newQuote);
                                   
                                   // Update local state
                                   setSelectedProjectQuotes([...selectedProjectQuotes, newQuote]);
@@ -2832,8 +2847,11 @@ export default function ThreeInOne({
                                   
                                   // Trigger update event
                                   window.dispatchEvent(new Event('saltxc-quotes-updated'));
+                                  setSaveStatus('saved');
+                                  setTimeout(() => setSaveStatus('idle'), 1500);
                                 } catch (error) {
                                   console.error('Failed to create quote:', error);
+                                  setSaveStatus('idle');
                                   alert('Failed to create quote');
                                 }
                               }}
