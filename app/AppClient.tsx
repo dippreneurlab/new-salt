@@ -151,6 +151,7 @@ export default function Home() {
       if (firebaseUser) {
         const token: IdTokenResult = await firebaseUser.getIdTokenResult(true);
         const roleClaim = (token.claims.role as string) || 'user';
+        console.log('Firebase token claims (frontend):', token.claims);
         const userData = {
           email: firebaseUser.email || '',
           name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
